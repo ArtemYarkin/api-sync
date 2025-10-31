@@ -1,0 +1,49 @@
+services:
+  app:
+    image: php:8.3-fpm  
+    container_name: laravel_api_sync_app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html  
+    depends_on:
+      - mysql
+    networks:
+      - laravel
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=api_sync
+      - DB_USERNAME=root
+      - DB_PASSWORD=password
+    command: >
+      sh -c "
+      apt-get update &&
+      apt-get install -y default-mysql-client &&
+      docker-php-ext-install pdo pdo_mysql &&
+      php-fpm
+      "
+
+  mysql:
+    image: mysql:8.0
+    container_name: laravel_api_sync_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: api_sync
+      MYSQL_ROOT_PASSWORD: password
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - laravel
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  laravel:
+    driver: bridge
+    
+    

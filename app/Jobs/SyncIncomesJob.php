@@ -4,72 +4,74 @@ namespace App\Jobs;
 
 use App\Models\Income;
 use App\Services\ApiService;
-use Illuminate\Bus\Batchable;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class SyncIncomesJob implements ShouldQueue
+class SyncIncomesJob extends BaseSyncJob
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    public function handle(ApiService $apiService): void
+    {
+        try {
+            $apiService->setAccount($this->account);
+            
+            $this->logToConsole("Starting incomes sync from {$this->dateFrom} to {$this->dateTo}");
 
-    public function __construct(
-        private string $dateFrom,
-        private string $dateTo
-    ) {}
+            $this->syncData($apiService);
+            
+        } catch (\Exception $e) {
+            Log::error("SyncIncomesJob failed for account {$this->account->name}", [
+                'error' => $e->getMessage(),
+                'date_from' => $this->dateFrom,
+                'date_to' => $this->dateTo
+            ]);
+            
+            $this->logToConsole("Sync failed: {$e->getMessage()}");
+            
+            throw $e;
+        }
+    }
 
-public function handle(ApiService $apiService): void
-{
-    try {
+    protected function syncData(ApiService $apiService): void
+    {
         $generator = $apiService->fetchPaginatedData('/api/incomes', [
             'dateFrom' => $this->dateFrom,
             'dateTo' => $this->dateTo,
         ]);
 
-        $totalProcessed = 0;
-        
+        $total = 0;
         foreach ($generator as $incomesChunk) {
             foreach ($incomesChunk as $incomeData) {
-                Income::updateOrCreate( 
+                Income::firstOrCreate([
+                'data' => $incomeData,
+                'account_id' => $this->account->id 
+            ],
                     $this->transformIncomeData($incomeData)
                 );
-            }      
+            }
             $chunkCount = count($incomesChunk);
-            $totalProcessed += $chunkCount;
-            
+            $total += $chunkCount;
+            $this->logToConsole("Processed {$chunkCount} incomes (total: {$total})");
         }
         
-        
-    } catch (\Exception $e) {
-        Log::error("SyncIncomesJob failed", [
-            'error' => $e->getMessage(),
-            'date_from' => $this->dateFrom,
-            'date_to' => $this->dateTo
-        ]);
-        
-        throw $e;
+        $this->logToConsole("Incomes sync completed: {$total} records");
     }
-}
 
-private function transformIncomeData(array $data): array
-{
-    return [
-        'income_id' => $data['income_id'],
-        'number' => $data['number'],
-        'date' => $data['date'],
-        'last_change_date' => $data['last_change_date'],
-        'supplier_article' => $data['supplier_article'],
-        'tech_size' => $data['tech_size'],
-        'barcode' => $data['barcode'],
-        'quantity' => $data['quantity'],
-        'total_price' => $data['total_price'],
-        'date_close' => $data['date_close'],
-        'warehouse_name' => $data['warehouse_name'],
-        'nm_id' => $data['nm_id'],
-        'data' => $data
-    ];
-}
+    private function transformIncomeData(array $data): array
+    {
+        return [
+            'account_id' => $this->account->id,
+            'income_id' => $data['income_id'],
+            'number' => $data['number'],
+            'date' => $data['date'],
+            'last_change_date' => $data['last_change_date'],
+            'supplier_article' => $data['supplier_article'],
+            'tech_size' => $data['tech_size'],
+            'barcode' => $data['barcode'],
+            'quantity' => $data['quantity'],
+            'total_price' => $data['total_price'],
+            'date_close' => $data['date_close'],
+            'warehouse_name' => $data['warehouse_name'],
+            'nm_id' => $data['nm_id'],
+            'data' => $data
+        ];
+    }
 }
