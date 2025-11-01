@@ -33,9 +33,12 @@ class SyncStocksJob implements ShouldQueue
             $total = 0;
             foreach ($generator as $stocksChunk) {
                 foreach ($stocksChunk as $stockData) {
-                    Stock::firstOrCreate(
+                    Stock::updateOrCreate(
                         [
-                            'data' => $stockData,
+                            'nm_id' => $stockData['nm_id'],
+                            'supplier_article' => $stockData['supplier_article'],
+                            'sync_date' => $today,
+                            'date' => $stockData['date'],
                             'account_id' => $this->account->id
                         ],
                         $this->transformStockData($stockData, $today)

@@ -12,20 +12,19 @@ class SyncOrdersJob extends BaseSyncJob
     {
         try {
             $apiService->setAccount($this->account);
-            
+
             $this->logToConsole("Starting orders sync from {$this->dateFrom} to {$this->dateTo}");
-            
+
             $this->syncData($apiService);
-            
         } catch (\Exception $e) {
             Log::error("SyncOrdersJob failed for account {$this->account->name}", [
                 'error' => $e->getMessage(),
                 'date_from' => $this->dateFrom,
                 'date_to' => $this->dateTo
             ]);
-            
+
             $this->logToConsole("Sync failed: {$e->getMessage()}");
-            
+
             throw $e;
         }
     }
@@ -40,10 +39,14 @@ class SyncOrdersJob extends BaseSyncJob
         $total = 0;
         foreach ($generator as $ordersChunk) {
             foreach ($ordersChunk as $orderData) {
-                Order::firstOrCreate([
-                    'account_id' => $this->account->id,
-                    'data' => $orderData,
-                ],
+                Order::updateOrCreate(
+                    [
+                        'g_number' => $orderData['g_number'],
+                        'account_id' => $this->account->id,
+                        'nm_id' => $orderData['nm_id'],
+                        'supplier_article' => $orderData['supplier_article'],
+                        'date' => $orderData['date']
+                    ],
                     $this->transformOrderData($orderData)
                 );
             }
@@ -51,7 +54,7 @@ class SyncOrdersJob extends BaseSyncJob
             $total += $chunkCount;
             $this->logToConsole("Processed {$chunkCount} orders (total: {$total})");
         }
-        
+
         $this->logToConsole("Orders sync completed: {$total} records");
     }
 

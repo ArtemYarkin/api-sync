@@ -12,20 +12,19 @@ class SyncIncomesJob extends BaseSyncJob
     {
         try {
             $apiService->setAccount($this->account);
-            
+
             $this->logToConsole("Starting incomes sync from {$this->dateFrom} to {$this->dateTo}");
 
             $this->syncData($apiService);
-            
         } catch (\Exception $e) {
             Log::error("SyncIncomesJob failed for account {$this->account->name}", [
                 'error' => $e->getMessage(),
                 'date_from' => $this->dateFrom,
                 'date_to' => $this->dateTo
             ]);
-            
+
             $this->logToConsole("Sync failed: {$e->getMessage()}");
-            
+
             throw $e;
         }
     }
@@ -40,10 +39,13 @@ class SyncIncomesJob extends BaseSyncJob
         $total = 0;
         foreach ($generator as $incomesChunk) {
             foreach ($incomesChunk as $incomeData) {
-                Income::firstOrCreate([
-                'data' => $incomeData,
-                'account_id' => $this->account->id 
-            ],
+                Income::updateOrCreate(
+                    [
+                        'income_id' => $incomeData['income_id'],
+                        'account_id' => $this->account->id,
+                        'nm_id' => $incomeData['nm_id'],
+                        'date' => $incomeData['date']
+                    ],
                     $this->transformIncomeData($incomeData)
                 );
             }
@@ -51,7 +53,7 @@ class SyncIncomesJob extends BaseSyncJob
             $total += $chunkCount;
             $this->logToConsole("Processed {$chunkCount} incomes (total: {$total})");
         }
-        
+
         $this->logToConsole("Incomes sync completed: {$total} records");
     }
 

@@ -60,14 +60,6 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-### Подключение к MySQL
-
-Хост: VH326.spaceweb.ru
-Порт: 3308
-База данных: artemyar20
-Пользователь: artemyar20
-Пароль: 12345678Api
-
 ### Таблицы в базе данных
 
 **Основные таблицы:**
@@ -75,6 +67,12 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 - **orders** - данные о заказах  
 - **stocks** - данные о складах
 - **incomes** - данные о доходах
+- **companies** - компании
+- **accounts** - аккаунты компаний
+- **api_services** - API сервисы
+- **token_types** - типы токенов
+- **api_tokens** - токены доступа
+- **api_service_token_type** - связь сервисов и типов токенов
 
 **Служебные таблицы Laravel:**
 - **migrations** - история миграций
